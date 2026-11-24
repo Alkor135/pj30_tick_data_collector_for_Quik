@@ -5,6 +5,7 @@ r"""Сохраняет обезличенные сделки ближайших 
 Время хранится целым числом микросекунд с начала эпохи Unix в UTC.
 Недельная база старого формата обновляется при первой записи в неё.
 Пакет удаляется только после фиксации записей во всех затронутых базах.
+Сводка о новых сделках содержит локальное время обработки.
 
 Постоянный сбор: .\.venv\Scripts\python.exe .\collect_ticks.py
 Разовый импорт: .\.venv\Scripts\python.exe .\collect_ticks.py --once
@@ -188,7 +189,7 @@ class TickStore:
 
 
 def collect(args):
-    """По параметрам args обрабатывает пакеты из очереди и возвращает код завершения."""
+    """Обрабатывает пакеты по параметрам args, выводит сводку и возвращает код завершения."""
     args.spool_dir.mkdir(parents=True, exist_ok=True)
     args.data_dir.mkdir(parents=True, exist_ok=True)
     store = TickStore(args.data_dir)
@@ -212,7 +213,8 @@ def collect(args):
                         print(f"Повтор импорта {path.name}: {error}", file=sys.stderr, flush=True)
                         break
                 if imported:
-                    print(f"Новых сделок: {imported}", flush=True)
+                    processed_at = datetime.now().astimezone().isoformat(sep=" ", timespec="seconds")
+                    print(f"[{processed_at}] Новых сделок: {imported}", flush=True)
                 if args.once:
                     return int(bool(rejected) or retry)
                 sleep(2 if retry else 0.25)

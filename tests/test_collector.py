@@ -56,15 +56,18 @@ class CollectorTests(unittest.TestCase):
         self.spool.mkdir()
 
     def test_routes_batch_by_week_and_replays_without_duplicates(self):
-        """Проверяет границу недели по МСК, точность времени UTC и защиту от дублей."""
+        """Проверяет границу недели, точность времени UTC, отчёт об импорте и защиту от дублей."""
         previous = "SPBFUT\tRIZ6\t2026-11-22T23:59:59.999999\t42\t106120\t3\t1025\n"
         following = "SPBFUT\tMXZ6\t2026-11-23T00:00:00.000008\t42\t276425\t2\t1\n"
         package = self.spool / "fixture.tsv"
-        for _ in range(2):
+        for attempt in range(2):
             package.write_text(previous + following + following, encoding="ascii")
             result = run_import(self.spool, self.output)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(package.exists())
+            if attempt == 0:
+                self.assertRegex(result.stdout,
+                                 r"(?m)^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}\] Новых сделок: 2$")
 
         self.assertEqual(sorted(path.name for path in self.output.glob("*.sqlite")),
                          ["ticks_2026-11-16.sqlite", "ticks_2026-11-23.sqlite"])
